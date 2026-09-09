@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GedComOrt v1.0.14</title>
+<title>GedComOrt v1.0.15</title>
 <style>
 :root {
   --bg: #1a1f2e; --surface: #232938; --surface2: #2c3347; --border: #3a4258;
@@ -94,7 +94,7 @@ footer { text-align: center; padding: 12px; font-size: 0.7rem; color: var(--mute
 
 <header>
   <h1>GedComOrt</h1>
-  <span class="vtag">v1.0.14</span>
+  <span class="vtag">v1.0.15</span>
   <span class="tagline">Geocodning av GEDCOM-platser</span>
 </header>
 
@@ -116,21 +116,22 @@ footer { text-align: center; padding: 12px; font-size: 0.7rem; color: var(--mute
     </div>
 
     <div class="file-banner">
-      <span class="lbl">Importera koordinater från tidigare geocodad fil:</span>
+      <span class="lbl">Importera från Disgen ortsfil (ZIP):</span>
       <span class="val" id="imp-fname" style="color:var(--muted);font-weight:400">ingen fil vald</span>
       <span class="imp-result hidden" id="imp-result"></span>
-      <button class="imp-btn" id="imp-btn">&#x1F4C2; Välj tidigare fil…</button>
-      <input type="file" id="imp-input" accept=".ged,.GED" style="display:none">
+      <button class="imp-btn" id="imp-btn">&#x1F4C2; Välj DisgenPlaces ZIP…</button>
+      <input type="file" id="imp-input" accept=".zip,.ZIP" style="display:none">
     </div>
 
     <div class="info-box">
-      <b>Sökkällor &amp; strategi (v1.0.14):</b>
+      <b>Sökkällor &amp; strategi (v1.0.15):</b>
       <div class="src-legend">
+        <span><span class="src-dot" style="background:#a78bfa"></span>Disgen ZIP (primär)</span>
         <span><span class="src-dot dot-nom"></span>Nominatim/OSM</span>
         <span><span class="src-dot dot-ph"></span>Photon/Komoot</span>
         <span><span class="src-dot dot-approx"></span>Ungefärlig (ort/socken)</span>
       </div>
-      Länskoder (M)(K)(L) rensas · Gårdsnummer/gravnummer/kv-beteckningar rensas · Landssuffix prövas med och utan · Kyrkogårdar/krematorier söks som POI · Gatuadresser prövas först i originalform
+      Importera Disgen-ortsfil (ZIP) för direktmatchning · Länskoder rensas · Gårdsnummer/kv-beteckningar rensas · Geocodning som komplement för ej matchade
     </div>
 
     <div class="stats">
@@ -196,7 +197,7 @@ footer { text-align: center; padding: 12px; font-size: 0.7rem; color: var(--mute
   </div>
 </main>
 
-<footer>GedComOrt v1.0.14 &mdash; Nominatim (OSM) + Photon (Komoot)</footer>
+<footer>GedComOrt v1.0.15 &mdash; Nominatim (OSM) + Photon (Komoot)</footer>
 
 <script>
 (function() {
@@ -271,43 +272,87 @@ function readText(file, cb){
   r.readAsText(file,'UTF-8');
 }
 
-// ── Import ─────────────────────────────────────────────────────────────────
+// ── Import from Disgen ZIP ─────────────────────────────────────────────────
 impBtn.addEventListener('click', function(e){ e.stopPropagation(); impInput.click(); });
-impInput.addEventListener('change', function(){ if(impInput.files[0]) importCoords(impInput.files[0]); });
+impInput.addEventListener('change', function(){ if(impInput.files[0]) importZip(impInput.files[0]); });
 
-function importCoords(file){
-  readText(file, function(text){
-    var imp=text.split(/\r?\n/), cm={};
-    for(var i=0;i<imp.length;i++){
-      var m=imp[i].match(/^2 PLAC (.+)/); if(!m) continue;
-      var name=m[1].trim(); if(cm[name]) continue;
-      var lati=null,lon=null;
-      for(var j=i+1;j<imp.length&&j<i+10;j++){
-        if(/^[012] /.test(imp[j])&&!/^[34] /.test(imp[j])) break;
-        if(/^3 MAP/.test(imp[j])){
-          for(var k=j+1;k<imp.length&&/^4 /.test(imp[k]);k++){
-            var ml=imp[k].match(/^4 LATI (.+)/), mlo=imp[k].match(/^4 LONG (.+)/);
-            if(ml) lati=ml[1].trim(); if(mlo) lon=mlo[1].trim();
-          }
-          break;
+function importZip(file){
+  // Load JSZip dynamically if not present
+  if(typeof JSZip === 'undefined'){
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = function(){ doImportZip(file); };
+    s.onerror = function(){ alert('Kunde inte ladda JSZip-biblioteket. Kontrollera internetanslutningen.'); };
+    document.head.appendChild(s);
+  } else {
+    doImportZip(file);
+  }
+}
+
+function doImportZip(file){
+  var reader = new FileReader();
+  reader.onerror = function(){ alert('Kunde inte läsa ZIP-filen.'); };
+  reader.onload = function(e){
+    JSZip.loadAsync(e.target.result).then(function(zip){
+      // Find the XML file (DisgenPlacesA.xml or similar)
+      var xmlFile = null;
+      zip.forEach(function(path, f){
+        if(path.match(/\.xml$/i) && !f.dir) xmlFile = f;
+      });
+      if(!xmlFile){ alert('Hittade ingen XML-fil i ZIP-arkivet.'); return; }
+
+      xmlFile.async('string').then(function(xmlText){
+        // Parse XML and build coord map: FullName → {lati, lon}
+        var cm = {};
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(xmlText, 'text/xml');
+        var placesEl = doc.getElementsByTagName('Place');
+        var total = 0;
+        for(var i=0; i<placesEl.length; i++){
+          var pl = placesEl[i];
+          var fn = pl.getElementsByTagName('FullName')[0];
+          var la = pl.getElementsByTagName('Latitude')[0];
+          var lo = pl.getElementsByTagName('Longitude')[0];
+          if(!fn || !la || !lo) continue;
+          var name = fn.textContent.trim();
+          var lat  = parseFloat(la.textContent);
+          var lon  = parseFloat(lo.textContent);
+          if(!name || isNaN(lat) || isNaN(lon)) continue;
+          cm[name] = {
+            lati: (lat>=0?'N':'S')+Math.abs(lat).toFixed(6),
+            lon:  (lon>=0?'E':'W')+Math.abs(lon).toFixed(6)
+          };
+          total++;
         }
-      }
-      if(lati&&lon) cm[name]={lati:lati,lon:lon};
-    }
-    var applied=0,skipped=0;
-    Object.keys(places).forEach(function(n){
-      var p=places[n];
-      if(p.status==='has'||p.status==='found'){ skipped++; return; }
-      if(cm[n]){ p.lati=cm[n].lati; p.lon=cm[n].lon; p.status='found'; p.precision='imported'; p.source='import'; updateRow(n); applied++; }
+
+        // Apply to current places
+        var applied=0, skipped=0, notFound=0;
+        Object.keys(places).forEach(function(n){
+          var p=places[n];
+          if(p.status==='has'){ skipped++; return; }
+          if(cm[n]){
+            p.lati=cm[n].lati; p.lon=cm[n].lon;
+            p.status='found'; p.precision='imported'; p.source='disgen';
+            updateRow(n); applied++;
+          } else {
+            notFound++;
+          }
+        });
+
+        document.getElementById('imp-fname').textContent=file.name+' ('+total+' orter i XML)';
+        document.getElementById('imp-fname').style.color='var(--text)';
+        var res=document.getElementById('imp-result');
+        res.textContent='→ '+applied+' importerade, '+skipped+' redan kända, '+notFound+' ej matchade';
+        res.classList.remove('hidden');
+        updateStats(); applyFilter();
+        addLog('Disgen ZIP: '+total+' orter i XML → '+applied+' importerade till GEDCOM','ok');
+        if(notFound > 0) addLog(notFound+' platser i GEDCOM saknar match i ZIP-filen','warn');
+      });
+    }).catch(function(err){
+      alert('Fel vid läsning av ZIP: '+err.message);
     });
-    document.getElementById('imp-fname').textContent=file.name;
-    document.getElementById('imp-fname').style.color='var(--text)';
-    var res=document.getElementById('imp-result');
-    res.textContent='→ '+applied+' importerade, '+skipped+' redan kända';
-    res.classList.remove('hidden');
-    updateStats(); applyFilter();
-    addLog('Import från '+file.name+': '+applied+' koordinater hämtade','ok');
-  });
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 // ── Parse GEDCOM ───────────────────────────────────────────────────────────
@@ -447,7 +492,7 @@ function badgeHtml(p){
 
 function coordHtml(p){
   if(!p.lati||!p.lon) return '<span class="mono">—</span>';
-  var srcLabel = p.source==='nominatim'?' · OSM' : p.source==='photon'?' · Photon' : p.source==='import'?' · importerad' : '';
+  var srcLabel = p.source==='nominatim'?' · OSM' : p.source==='photon'?' · Photon' : p.source==='disgen'?' · Disgen' : p.source==='import'?' · importerad' : '';
   var precHtml='';
   if(p.precision==='exact') precHtml='<span class="prec good">adressnivå'+srcLabel+'</span>';
   else if(p.precision==='approx') precHtml='<span class="prec approx">ort/sockennivå'+srcLabel+'</span>';
