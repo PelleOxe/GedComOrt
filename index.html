@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GedComOrt v1.0.15</title>
+<title>GedComOrt v1.0.16</title>
 <style>
 :root {
   --bg: #1a1f2e; --surface: #232938; --surface2: #2c3347; --border: #3a4258;
@@ -88,13 +88,61 @@ tbody td { padding: 8px 14px; vertical-align: top; }
 .src-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
 .dot-nom { background: var(--accent2); } .dot-ph { background: #6b9bd2; } .dot-approx { background: var(--warn); }
 footer { text-align: center; padding: 12px; font-size: 0.7rem; color: var(--muted); border-top: 1px solid var(--border); }
+
+/* Search box */
+.search-wrap { position: relative; }
+.search-wrap input {
+  width: 100%; padding: 8px 12px 8px 34px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--r); color: var(--text); font-size: 0.85rem;
+  outline: none;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-wrap input::placeholder { color: var(--muted); }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); cursor: pointer; font-size: 1rem; line-height: 1; background: none; border: none; padding: 0; }
+.search-clear:hover { color: var(--text); }
+tbody tr.search-hidden { display: none; }
+tbody tr.selected-row td:first-child { border-left: 3px solid var(--accent2); padding-left: 11px; }
+
+/* Content layout: table + panel side by side */
+.content-layout { display: flex; gap: 16px; align-items: flex-start; }
+.content-layout .tbl-wrap { flex: 1; min-width: 0; }
+
+/* Side panel */
+#side-panel {
+  width: 320px; flex-shrink: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r); overflow: hidden;
+  display: none;
+}
+#side-panel.open { display: flex; flex-direction: column; }
+.panel-header {
+  background: var(--surface2); padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.panel-title { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+.panel-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; padding: 0; line-height: 1; }
+.panel-close:hover { color: var(--text); }
+.panel-place { font-size: 0.75rem; color: var(--muted); padding: 8px 14px; border-bottom: 1px solid var(--border); word-break: break-word; line-height: 1.5; }
+.panel-body { overflow-y: auto; max-height: 420px; padding: 8px 0; }
+.panel-event {
+  padding: 8px 14px; border-bottom: 1px solid var(--border);
+  font-size: 0.8rem; line-height: 1.55;
+}
+.panel-event:last-child { border-bottom: none; }
+.panel-person { font-weight: 600; color: var(--text); }
+.panel-evttype { display: inline-block; font-size: 0.68rem; background: rgba(45,138,110,.15); color: var(--accent2); border-radius: 3px; padding: 1px 5px; margin-left: 4px; vertical-align: middle; }
+.panel-date { font-size: 0.74rem; color: var(--muted); }
+.panel-empty { padding: 20px 14px; color: var(--muted); font-size: 0.8rem; text-align: center; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>GedComOrt</h1>
-  <span class="vtag">v1.0.15</span>
+  <span class="vtag">v1.0.16</span>
   <span class="tagline">Geocodning av GEDCOM-platser</span>
 </header>
 
@@ -124,7 +172,7 @@ footer { text-align: center; padding: 12px; font-size: 0.7rem; color: var(--mute
     </div>
 
     <div class="info-box">
-      <b>Sökkällor &amp; strategi (v1.0.15):</b>
+      <b>Sökkällor &amp; strategi (v1.0.16):</b>
       <div class="src-legend">
         <span><span class="src-dot" style="background:#a78bfa"></span>Disgen ZIP (primär)</span>
         <span><span class="src-dot dot-nom"></span>Nominatim/OSM</span>
@@ -171,6 +219,11 @@ footer { text-align: center; padding: 12px; font-size: 0.7rem; color: var(--mute
 
     <div>
       <div class="sec-title">PLATSER I FILEN</div>
+      <div class="search-wrap" style="margin-bottom:8px">
+        <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="place-search" placeholder="Sök plats… (ord i valfri ordning, t.ex. Raus Planteringsvägen)">
+        <button class="search-clear hidden" id="search-clear" title="Rensa sökning">&times;</button>
+      </div>
       <div class="filter-bar" style="margin-bottom:8px">
         <span>Filtrera:</span>
         <button class="flt active" data-filter="all">Alla</button>
@@ -181,11 +234,21 @@ footer { text-align: center; padding: 12px; font-size: 0.7rem; color: var(--mute
         <button class="flt" data-filter="error">Ej hittade</button>
         <span id="filter-count"></span>
       </div>
-      <div class="tbl-wrap">
-        <table>
-          <thead><tr><th>Plats</th><th>Förek.</th><th>Status</th><th>Koordinater &amp; precision</th></tr></thead>
-          <tbody id="tbl-body"></tbody>
-        </table>
+      <div class="content-layout">
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>Plats</th><th>Förek.</th><th>Status</th><th>Koordinater &amp; precision</th></tr></thead>
+            <tbody id="tbl-body"></tbody>
+          </table>
+        </div>
+        <div id="side-panel">
+          <div class="panel-header">
+            <span class="panel-title">&#x1F464; Personer &amp; händelser</span>
+            <button class="panel-close" id="panel-close">&times;</button>
+          </div>
+          <div class="panel-place" id="panel-place"></div>
+          <div class="panel-body" id="panel-body"></div>
+        </div>
       </div>
     </div>
 
@@ -197,7 +260,7 @@ footer { text-align: center; padding: 12px; font-size: 0.7rem; color: var(--mute
   </div>
 </main>
 
-<footer>GedComOrt v1.0.15 &mdash; Nominatim (OSM) + Photon (Komoot)</footer>
+<footer>GedComOrt v1.0.16 &mdash; Nominatim (OSM) + Photon (Komoot)</footer>
 
 <script>
 (function() {
@@ -215,21 +278,181 @@ var PRECISE = {
 };
 
 var lines=[], fname='', fsize=0, places={}, stopFlag=false, activeFilter='all';
+var personIndex = {}; // placeName → [{name, type, date, id}]
 
-var dropArea  = document.getElementById('drop-area');
-var pickBtn   = document.getElementById('pick-btn');
-var fileInput = document.getElementById('file-input');
-var workArea  = document.getElementById('work-area');
-var tblBody   = document.getElementById('tbl-body');
-var btnGeo    = document.getElementById('btn-geo');
-var btnSave   = document.getElementById('btn-save');
-var btnNew    = document.getElementById('btn-new');
-var progBox   = document.getElementById('prog-box');
-var spinner   = document.getElementById('spinner');
-var pSource   = document.getElementById('p-source');
-var logEl     = document.getElementById('log');
-var impBtn    = document.getElementById('imp-btn');
-var impInput  = document.getElementById('imp-input');
+var dropArea   = document.getElementById('drop-area');
+var pickBtn    = document.getElementById('pick-btn');
+var fileInput  = document.getElementById('file-input');
+var workArea   = document.getElementById('work-area');
+var tblBody    = document.getElementById('tbl-body');
+var btnGeo     = document.getElementById('btn-geo');
+var btnSave    = document.getElementById('btn-save');
+var btnNew     = document.getElementById('btn-new');
+var progBox    = document.getElementById('prog-box');
+var spinner    = document.getElementById('spinner');
+var pSource    = document.getElementById('p-source');
+var logEl      = document.getElementById('log');
+var impBtn     = document.getElementById('imp-btn');
+var impInput   = document.getElementById('imp-input');
+var placeSearch= document.getElementById('place-search');
+var searchClear= document.getElementById('search-clear');
+var sidePanel  = document.getElementById('side-panel');
+var panelPlace = document.getElementById('panel-place');
+var panelBody  = document.getElementById('panel-body');
+var panelClose = document.getElementById('panel-close');
+
+// ── Search ─────────────────────────────────────────────────────────────────
+placeSearch.addEventListener('input', function(){
+  searchClear.classList.toggle('hidden', !placeSearch.value);
+  applySearch();
+});
+searchClear.addEventListener('click', function(){
+  placeSearch.value=''; searchClear.classList.add('hidden');
+  applySearch();
+});
+
+function applySearch(){
+  var raw = placeSearch.value.trim();
+  // Split into words, each must appear somewhere in the place name (order-independent)
+  var words = raw.toLowerCase().split(/\s+/).filter(Boolean);
+  var visible=0, total=0;
+  Array.prototype.forEach.call(tblBody.rows, function(tr){
+    if(tr.classList.contains('hidden-row')){ tr.classList.add('search-hidden'); return; }
+    var name = (tr.dataset.placeName||'').toLowerCase();
+    var match = words.length===0 || words.every(function(w){ return name.indexOf(w)>=0; });
+    tr.classList.toggle('search-hidden', !match);
+    total++;
+    if(match) visible++;
+  });
+  document.getElementById('filter-count').textContent = visible+' av '+total+' visas';
+}
+
+// ── Side panel ─────────────────────────────────────────────────────────────
+panelClose.addEventListener('click', closePanel);
+
+function closePanel(){
+  sidePanel.classList.remove('open');
+  Array.prototype.forEach.call(tblBody.rows, function(tr){ tr.classList.remove('selected-row'); });
+}
+
+function openPanel(placeName){
+  // Highlight selected row
+  Array.prototype.forEach.call(tblBody.rows, function(tr){
+    tr.classList.toggle('selected-row', tr.dataset.placeName===placeName);
+  });
+  panelPlace.textContent = placeName;
+  panelBody.innerHTML='';
+
+  var events = personIndex[placeName] || [];
+  if(events.length===0){
+    panelBody.innerHTML='<div class="panel-empty">Inga personer hittade för denna plats.</div>';
+  } else {
+    events.forEach(function(ev){
+      var d = document.createElement('div');
+      d.className='panel-event';
+      d.innerHTML =
+        '<div><span class="panel-person">'+esc(ev.name)+'</span>'
+        +'<span class="panel-evttype">'+esc(ev.type)+'</span></div>'
+        +(ev.date?'<div class="panel-date">'+esc(ev.date)+'</div>':'');
+      panelBody.appendChild(d);
+    });
+  }
+  sidePanel.classList.add('open');
+}
+
+// ── Build person index from GEDCOM lines ───────────────────────────────────
+// Event tag → Swedish label
+var EVT_LABELS = {
+  BIRT:'Född', DEAT:'Död', BURI:'Begravd', CHR:'Döpt', CONF:'Konfirmerad',
+  MARR:'Gift', DIV:'Skild', ENGA:'Förlovad', RESI:'Bosatt', EMIG:'Emigrerat',
+  IMMI:'Immigrerat', NATU:'Naturaliserad', OCCU:'Yrke', EDUC:'Utbildning',
+  GRAD:'Examen', MILI:'Militärtjänst', CENS:'Folkräkning', PROB:'Bouppteckning',
+  WILL:'Testamente', EVEN:'Händelse', BAPM:'Döpt (baptism)', ADOP:'Adopterad',
+  FCOM:'Första nattvarden', ORDN:'Ordinerad', RETI:'Pensionerad'
+};
+
+function buildPersonIndex(){
+  personIndex = {};
+  // First pass: collect individual names keyed by @I123@ id
+  var names = {};
+  var i=0;
+  while(i<lines.length){
+    var m0 = lines[i].match(/^0 (@I\S+@) INDI/);
+    if(m0){
+      var id=m0[1], fullName='';
+      for(var j=i+1; j<lines.length; j++){
+        if(/^0 /.test(lines[j])) break;
+        var mn=lines[j].match(/^1 NAME (.+)/);
+        if(mn){ fullName=mn[1].replace(/\//g,'').replace(/\s+/g,' ').trim(); break; }
+      }
+      names[id]=fullName||id;
+    }
+    i++;
+  }
+
+  // Second pass: for each INDI, find all events with PLAC
+  i=0;
+  while(i<lines.length){
+    var mi = lines[i].match(/^0 (@I\S+@) INDI/);
+    if(mi){
+      var indiId=mi[1];
+      var personName=names[indiId]||indiId;
+      for(var j=i+1; j<lines.length; j++){
+        if(/^0 /.test(lines[j])) break;
+        // Level-1 event tag
+        var mevt=lines[j].match(/^1 ([A-Z]+)/);
+        if(!mevt) continue;
+        var tag=mevt[1];
+        var evtLabel=EVT_LABELS[tag]||tag;
+        var evtDate='', evtPlace='';
+        // Scan level-2 sub-records
+        for(var k=j+1; k<lines.length; k++){
+          if(/^[01] /.test(lines[k])) break;
+          var md=lines[k].match(/^2 DATE (.+)/);
+          var mp=lines[k].match(/^2 PLAC (.+)/);
+          if(md) evtDate=md[1].trim();
+          if(mp) evtPlace=mp[1].trim();
+        }
+        if(evtPlace){
+          if(!personIndex[evtPlace]) personIndex[evtPlace]=[];
+          personIndex[evtPlace].push({name:personName, type:evtLabel, date:evtDate, id:indiId});
+        }
+      }
+    }
+    // Also handle FAM records for marriage events
+    var mf = lines[i].match(/^0 (@F\S+@) FAM/);
+    if(mf){
+      // Collect spouses
+      var spouses=[];
+      for(var j=i+1; j<lines.length; j++){
+        if(/^0 /.test(lines[j])) break;
+        var mhu=lines[j].match(/^1 HUSB (@I\S+@)/);
+        var mwi=lines[j].match(/^1 WIFE (@I\S+@)/);
+        if(mhu && names[mhu[1]]) spouses.push(names[mhu[1]]);
+        if(mwi && names[mwi[1]]) spouses.push(names[mwi[1]]);
+      }
+      var spouseLine = spouses.join(' & ') || 'Okänt par';
+      for(var j=i+1; j<lines.length; j++){
+        if(/^0 /.test(lines[j])) break;
+        var mevt2=lines[j].match(/^1 ([A-Z]+)/); if(!mevt2) continue;
+        var tag2=mevt2[1], evtLabel2=EVT_LABELS[tag2]||tag2;
+        var evtDate2='', evtPlace2='';
+        for(var k=j+1; k<lines.length; k++){
+          if(/^[01] /.test(lines[k])) break;
+          var md2=lines[k].match(/^2 DATE (.+)/);
+          var mp2=lines[k].match(/^2 PLAC (.+)/);
+          if(md2) evtDate2=md2[1].trim();
+          if(mp2) evtPlace2=mp2[1].trim();
+        }
+        if(evtPlace2){
+          if(!personIndex[evtPlace2]) personIndex[evtPlace2]=[];
+          personIndex[evtPlace2].push({name:spouseLine, type:evtLabel2, date:evtDate2, id:mf[1]});
+        }
+      }
+    }
+    i++;
+  }
+}
 
 // ── File load ──────────────────────────────────────────────────────────────
 pickBtn.addEventListener('click', function(e){ e.stopPropagation(); fileInput.click(); });
@@ -257,11 +480,15 @@ function loadFile(file){
   fname=file.name; fsize=file.size;
   readText(file, function(text){
     lines=text.split(/\r?\n/);
-    parseGedcom(); renderTable(); updateStats(); applyFilter();
+    parseGedcom();
+    buildPersonIndex();
+    renderTable(); updateStats(); applyFilter();
     dropArea.classList.add('hidden'); workArea.classList.remove('hidden');
     document.getElementById('fname').textContent=fname;
     document.getElementById('fmeta').textContent=(fsize/1024).toFixed(1)+' KB · '+lines.length.toLocaleString('sv-SE')+' rader';
-    addLog('Fil laddad: '+fname+' ('+lines.length.toLocaleString('sv-SE')+' rader)','ok');
+    // Reset search and panel
+    placeSearch.value=''; searchClear.classList.add('hidden'); closePanel();
+    addLog('Fil laddad: '+fname+' ('+lines.length.toLocaleString('sv-SE')+' rader) · '+Object.keys(personIndex).length+' platser indexerade','ok');
   });
 }
 
@@ -468,8 +695,11 @@ function renderTable(){
     return (order[places[a].status]||0)-(order[places[b].status]||0)||places[b].count-places[a].count;
   }).forEach(function(n){
     var p=places[n], tr=document.createElement('tr');
-    tr.id=pid(n); tr.dataset.status=p.status;
+    tr.id=pid(n); tr.dataset.status=p.status; tr.dataset.placeName=n;
+    tr.style.cursor='pointer';
+    tr.title='Klicka för att visa personer och händelser';
     tr.innerHTML='<td>'+esc(n)+'</td><td style="color:var(--muted)">'+p.count+'</td><td>'+badgeHtml(p)+'</td><td>'+coordHtml(p)+'</td>';
+    tr.addEventListener('click', function(){ openPanel(n); });
     tblBody.appendChild(tr);
   });
 }
@@ -508,14 +738,29 @@ document.querySelectorAll('.flt').forEach(function(btn){
     activeFilter=btn.dataset.filter;
     document.querySelectorAll('.flt').forEach(function(b){ b.classList.toggle('active',b===btn); });
     applyFilter();
+    applySearch();
   });
 });
 function applyFilter(){
-  var visible=0,total=0;
   Array.prototype.forEach.call(tblBody.rows,function(tr){
     var st=tr.dataset.status||'';
     var show=activeFilter==='all'||activeFilter===st||(activeFilter==='has'&&(st==='found'||st==='has'));
-    tr.classList.toggle('hidden-row',!show); total++; if(show) visible++;
+    tr.classList.toggle('hidden-row',!show);
+  });
+  applySearch(); // search re-counts
+}
+
+function applySearch(){
+  var raw=placeSearch.value.trim();
+  var words=raw.toLowerCase().split(/\s+/).filter(Boolean);
+  var visible=0, total=0;
+  Array.prototype.forEach.call(tblBody.rows,function(tr){
+    total++;
+    if(tr.classList.contains('hidden-row')){ tr.classList.add('search-hidden'); return; }
+    var name=(tr.dataset.placeName||'').toLowerCase();
+    var match=words.length===0||words.every(function(w){ return name.indexOf(w)>=0; });
+    tr.classList.toggle('search-hidden',!match);
+    if(match) visible++;
   });
   document.getElementById('filter-count').textContent=visible+' av '+total+' visas';
 }
