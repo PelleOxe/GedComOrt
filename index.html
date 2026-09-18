@@ -3,197 +3,247 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GedComOrt v1.0.16</title>
+<title>GedComOrt v1.0.17</title>
 <style>
 :root {
   --bg: #1a1f2e; --surface: #232938; --surface2: #2c3347; --border: #3a4258;
   --accent: #2d8a6e; --accent2: #3ab089; --text: #e8ecf4; --muted: #8892aa;
   --warn: #c97b3a; --error: #c94a4a; --r: 6px;
+  --hdr: 44px;   /* header height */
+  --ftr: 32px;   /* footer height */
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 10px; }
-header h1 { font-size: 1.2rem; font-weight: 600; }
-.vtag { font-size: 0.7rem; border: 1px solid var(--accent); color: var(--accent2); border-radius: 3px; padding: 1px 6px; }
-.tagline { margin-left: auto; font-size: 0.8rem; color: var(--muted); }
-main { flex: 1; padding: 28px 24px; max-width: 980px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
-#drop-area { border: 2px dashed var(--accent); border-radius: var(--r); background: var(--surface); padding: 56px 24px; text-align: center; cursor: pointer; }
+body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text);
+       height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Header ── */
+header { height: var(--hdr); background: var(--surface); border-bottom: 1px solid var(--border);
+         padding: 0 16px; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+header h1 { font-size: 1.1rem; font-weight: 600; }
+.vtag { font-size: 0.68rem; border: 1px solid var(--accent); color: var(--accent2); border-radius: 3px; padding: 1px 5px; }
+.tagline { margin-left: auto; font-size: 0.78rem; color: var(--muted); }
+
+/* ── Drop zone (shown before file loaded) ── */
+#drop-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+             border: 2px dashed var(--accent); border-radius: var(--r); background: var(--surface);
+             margin: 20px; cursor: pointer; text-align: center; }
 #drop-area:hover { background: var(--surface2); }
 #drop-area h2 { font-size: 1.1rem; margin-bottom: 8px; }
 #drop-area p { color: var(--muted); font-size: 0.85rem; margin-bottom: 20px; }
-.pick-btn { background: var(--accent); color: #fff; border: none; padding: 10px 28px; border-radius: var(--r); font-size: 0.9rem; cursor: pointer; }
-.file-banner { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 10px 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.pick-btn { background: var(--accent); color: #fff; border: none; padding: 10px 28px;
+            border-radius: var(--r); font-size: 0.9rem; cursor: pointer; }
+
+/* ── Dashboard layout ── */
+#work-area {
+  flex: 1; display: grid; overflow: hidden;
+  grid-template-columns: 260px 1fr 300px;
+  grid-template-rows: 1fr;
+  gap: 0;
+}
+
+/* Left column */
+#col-left { border-right: 1px solid var(--border); display: flex; flex-direction: column;
+            overflow-y: auto; padding: 12px; gap: 10px; }
+
+/* Middle column */
+#col-mid { display: flex; flex-direction: column; overflow: hidden; padding: 10px 12px; gap: 8px; }
+
+/* Right column */
+#col-right { border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+
+/* ── Footer ── */
+footer { height: var(--ftr); display: flex; align-items: center; justify-content: center;
+         font-size: 0.68rem; color: var(--muted); border-top: 1px solid var(--border); flex-shrink: 0; }
+
+/* ── Left col: file banners ── */
+.file-banner { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+               padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
 .file-banner.active { border-color: var(--accent); }
-.lbl { color: var(--muted); font-size: 0.8rem; flex-shrink: 0; }
-.val { font-weight: 600; font-size: 0.88rem; }
-.meta { color: var(--muted); font-size: 0.76rem; }
-.imp-btn { margin-left: auto; background: var(--surface2); color: var(--text); border: 1px solid var(--border); padding: 6px 14px; border-radius: var(--r); font-size: 0.8rem; cursor: pointer; white-space: nowrap; }
+.fb-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.lbl { color: var(--muted); font-size: 0.72rem; flex-shrink: 0; }
+.val { font-weight: 600; font-size: 0.82rem; word-break: break-all; }
+.meta { color: var(--muted); font-size: 0.72rem; }
+.imp-btn { background: var(--surface2); color: var(--text); border: 1px solid var(--border);
+           padding: 4px 10px; border-radius: var(--r); font-size: 0.74rem; cursor: pointer;
+           white-space: nowrap; margin-top: 2px; width: 100%; justify-content: center; }
 .imp-btn:hover { border-color: var(--accent); }
-.imp-result { font-size: 0.76rem; color: var(--accent2); }
-.stats { display: flex; gap: 12px; flex-wrap: wrap; }
-.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 18px; flex: 1; min-width: 110px; }
-.stat .n { font-size: 1.8rem; font-weight: 700; line-height: 1; }
-.stat .t { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+.imp-result { font-size: 0.7rem; color: var(--accent2); }
+
+/* ── Left col: info box ── */
+.info-box { background: var(--surface); border: 1px solid var(--border);
+            border-left: 3px solid var(--accent); border-radius: var(--r);
+            padding: 8px 10px; font-size: 0.73rem; color: var(--muted); line-height: 1.6; }
+.info-box b { color: var(--text); font-size: 0.73rem; }
+.src-legend { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+.src-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
+.dot-nom { background: var(--accent2); } .dot-ph { background: #6b9bd2; } .dot-approx { background: var(--warn); }
+
+/* ── Left col: stats ── */
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+        padding: 8px 10px; }
+.stat .n { font-size: 1.4rem; font-weight: 700; line-height: 1; }
+.stat .t { font-size: 0.65rem; color: var(--muted); margin-top: 3px; }
 .green { color: var(--accent2); } .orange { color: var(--warn); } .red { color: var(--error); }
-.controls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--r); border: none; cursor: pointer; font-size: 0.85rem; font-weight: 500; transition: opacity .15s; }
+
+/* ── Left col: controls ── */
+.controls { display: flex; flex-direction: column; gap: 6px; }
+button { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+         padding: 7px 14px; border-radius: var(--r); border: none; cursor: pointer;
+         font-size: 0.82rem; font-weight: 500; transition: opacity .15s; }
 button:disabled { opacity: 0.35; cursor: not-allowed; }
 button:not(:disabled):hover { opacity: .85; }
 .btn-primary { background: var(--accent); color: #fff; }
 .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
 .btn-stop { background: var(--warn); color: #fff; }
-.filter-bar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.filter-bar > span { font-size: 0.76rem; color: var(--muted); margin-right: 2px; }
-.flt { background: var(--surface2); border: 1px solid var(--border); color: var(--muted); padding: 4px 12px; border-radius: 20px; font-size: 0.76rem; cursor: pointer; }
+
+/* ── Left col: progress ── */
+#prog-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r);
+            padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+.prog-top { display: flex; flex-direction: column; gap: 4px; }
+.prog-current { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; }
+.prog-place { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.prog-source { font-size: 0.66rem; color: var(--accent2); background: rgba(45,138,110,.15);
+               border-radius: 3px; padding: 1px 5px; flex-shrink: 0; }
+.prog-counters { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; font-size: 0.7rem; color: var(--muted); }
+.prog-counters b { color: var(--text); }
+.prog-bar-wrap { background: var(--surface2); border-radius: 3px; height: 5px; overflow: hidden; }
+.prog-bar { height: 100%; background: var(--accent); border-radius: 3px; width: 0%; transition: width .3s; }
+.prog-bottom { display: flex; justify-content: space-between; font-size: 0.68rem; color: var(--muted); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner { width: 11px; height: 11px; border: 2px solid var(--border); border-top-color: var(--accent2);
+           border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+
+/* ── Left col: log ── */
+#log { flex: 1; min-height: 60px; background: var(--surface); border: 1px solid var(--border);
+       border-radius: var(--r); padding: 8px 10px; font-family: monospace; font-size: 0.7rem;
+       color: var(--muted); overflow-y: auto; line-height: 1.6; }
+.lok { color: var(--accent2); } .lwarn { color: var(--warn); }
+
+/* ── Middle col: search + filter ── */
+.sec-title { font-size: 0.68rem; font-weight: 600; letter-spacing: .05em; color: var(--muted); margin-bottom: 4px; }
+.search-wrap { position: relative; }
+.search-wrap input { width: 100%; padding: 7px 10px 7px 30px; background: var(--surface2);
+  border: 1px solid var(--border); border-radius: var(--r); color: var(--text); font-size: 0.82rem; outline: none; }
+.search-wrap input:focus { border-color: var(--accent); }
+.search-wrap input::placeholder { color: var(--muted); }
+.search-icon { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+.search-clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+                color: var(--muted); cursor: pointer; background: none; border: none; padding: 0; font-size: 1rem; line-height: 1; }
+.search-clear:hover { color: var(--text); }
+
+.filter-bar { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+.filter-bar > span { font-size: 0.72rem; color: var(--muted); }
+.flt { background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+       padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; cursor: pointer; }
 .flt.active { border-color: var(--accent); color: var(--accent2); background: rgba(45,138,110,.12); }
 .flt:hover:not(.active) { border-color: var(--muted); color: var(--text); }
-#filter-count { font-size: 0.76rem; color: var(--muted); margin-left: auto; }
-#prog-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
-.prog-top { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-.prog-current { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; flex: 1; min-width: 0; }
-.prog-place { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.prog-source { font-size: 0.72rem; color: var(--accent2); background: rgba(45,138,110,.15); border-radius: 3px; padding: 1px 6px; flex-shrink: 0; }
-.prog-counters { display: flex; gap: 12px; font-size: 0.76rem; color: var(--muted); flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
-.prog-counters b { color: var(--text); }
-.prog-bar-wrap { background: var(--surface2); border-radius: 3px; height: 6px; overflow: hidden; }
-.prog-bar { height: 100%; background: var(--accent); border-radius: 3px; width: 0%; transition: width .3s; }
-.prog-bottom { display: flex; justify-content: space-between; font-size: 0.76rem; color: var(--muted); }
-@keyframes spin { to { transform: rotate(360deg); } }
-.spinner { width: 13px; height: 13px; border: 2px solid var(--border); border-top-color: var(--accent2); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
-.tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); overflow: auto; max-height: 440px; }
-table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
-thead th { background: var(--surface2); padding: 9px 14px; text-align: left; color: var(--muted); font-size: 0.72rem; font-weight: 500; letter-spacing: .04em; position: sticky; top: 0; border-bottom: 1px solid var(--border); }
+#filter-count { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+
+/* ── Middle col: table ── */
+.tbl-wrap { flex: 1; overflow-y: auto; background: var(--surface);
+            border: 1px solid var(--border); border-radius: var(--r); }
+table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+thead th { background: var(--surface2); padding: 7px 12px; text-align: left; color: var(--muted);
+           font-size: 0.68rem; font-weight: 500; letter-spacing: .04em; position: sticky; top: 0;
+           border-bottom: 1px solid var(--border); }
 tbody tr { border-bottom: 1px solid var(--border); }
 tbody tr:last-child { border-bottom: none; }
-tbody tr.hidden-row { display: none; }
-tbody td { padding: 8px 14px; vertical-align: top; }
-.badge { display: inline-block; padding: 2px 7px; border-radius: 3px; font-size: 0.7rem; font-weight: 500; }
+tbody tr.hidden-row, tbody tr.search-hidden { display: none; }
+tbody td { padding: 6px 12px; vertical-align: top; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: rgba(255,255,255,.02); }
+tbody tr.selected-row td:first-child { border-left: 3px solid var(--accent2); padding-left: 9px; }
+.badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 0.67rem; font-weight: 500; }
 .b-has    { background: rgba(58,176,137,.15); color: var(--accent2); }
 .b-miss   { background: rgba(201,123,58,.15); color: var(--warn); }
 .b-err    { background: rgba(201,74,74,.15); color: var(--error); }
 .b-pend   { background: rgba(136,146,170,.12); color: var(--muted); }
 .b-approx { background: rgba(201,123,58,.12); color: var(--warn); }
-.mono { font-family: monospace; font-size: 0.77rem; color: var(--muted); }
-.prec { font-size: 0.68rem; display: block; margin-top: 2px; }
+.mono { font-family: monospace; font-size: 0.72rem; color: var(--muted); }
+.prec { font-size: 0.64rem; display: block; margin-top: 1px; }
 .prec.good { color: var(--accent2); } .prec.approx { color: var(--warn); } .prec.imp { color: var(--muted); }
 @keyframes pulse { 0%,100%{background:transparent} 50%{background:rgba(45,138,110,.08)} }
 .searching { animation: pulse 1.2s ease-in-out infinite; }
-#log { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 10px 14px; font-family: monospace; font-size: 0.77rem; color: var(--muted); max-height: 130px; overflow-y: auto; line-height: 1.65; }
-.lok { color: var(--accent2); } .lwarn { color: var(--warn); }
-.hidden { display: none !important; }
-.sec-title { font-size: 0.72rem; font-weight: 600; letter-spacing: .05em; color: var(--muted); margin-bottom: 6px; }
-.info-box { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--r); padding: 10px 14px; font-size: 0.8rem; color: var(--muted); line-height: 1.7; }
-.info-box b { color: var(--text); }
-.src-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
-.src-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
-.dot-nom { background: var(--accent2); } .dot-ph { background: #6b9bd2; } .dot-approx { background: var(--warn); }
-footer { text-align: center; padding: 12px; font-size: 0.7rem; color: var(--muted); border-top: 1px solid var(--border); }
 
-/* Search box */
-.search-wrap { position: relative; }
-.search-wrap input {
-  width: 100%; padding: 8px 12px 8px 34px;
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: var(--r); color: var(--text); font-size: 0.85rem;
-  outline: none;
-}
-.search-wrap input:focus { border-color: var(--accent); }
-.search-wrap input::placeholder { color: var(--muted); }
-.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
-.search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); cursor: pointer; font-size: 1rem; line-height: 1; background: none; border: none; padding: 0; }
-.search-clear:hover { color: var(--text); }
-tbody tr.search-hidden { display: none; }
-tbody tr.selected-row td:first-child { border-left: 3px solid var(--accent2); padding-left: 11px; }
-
-/* Content layout: table + panel side by side */
-.content-layout { display: flex; gap: 16px; align-items: flex-start; }
-.content-layout .tbl-wrap { flex: 1; min-width: 0; }
-
-/* Side panel */
-#side-panel {
-  width: 320px; flex-shrink: 0;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--r); overflow: hidden;
-  display: none;
-}
-#side-panel.open { display: flex; flex-direction: column; }
-.panel-header {
-  background: var(--surface2); padding: 10px 14px;
-  border-bottom: 1px solid var(--border);
-  display: flex; justify-content: space-between; align-items: center;
-}
+/* ── Right col: side panel ── */
+#side-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.panel-header { background: var(--surface2); padding: 10px 14px; border-bottom: 1px solid var(--border);
+                display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
 .panel-title { font-size: 0.82rem; font-weight: 600; color: var(--text); }
 .panel-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1.1rem; padding: 0; line-height: 1; }
 .panel-close:hover { color: var(--text); }
-.panel-place { font-size: 0.75rem; color: var(--muted); padding: 8px 14px; border-bottom: 1px solid var(--border); word-break: break-word; line-height: 1.5; }
-.panel-body { overflow-y: auto; max-height: 420px; padding: 8px 0; }
-.panel-event {
-  padding: 8px 14px; border-bottom: 1px solid var(--border);
-  font-size: 0.8rem; line-height: 1.55;
-}
+.panel-place { font-size: 0.73rem; color: var(--muted); padding: 8px 14px;
+               border-bottom: 1px solid var(--border); word-break: break-word; line-height: 1.5; flex-shrink: 0; }
+.panel-body { flex: 1; overflow-y: auto; }
+.panel-event { padding: 7px 14px; border-bottom: 1px solid var(--border); font-size: 0.78rem; line-height: 1.5; }
 .panel-event:last-child { border-bottom: none; }
 .panel-person { font-weight: 600; color: var(--text); }
-.panel-evttype { display: inline-block; font-size: 0.68rem; background: rgba(45,138,110,.15); color: var(--accent2); border-radius: 3px; padding: 1px 5px; margin-left: 4px; vertical-align: middle; }
-.panel-date { font-size: 0.74rem; color: var(--muted); }
-.panel-empty { padding: 20px 14px; color: var(--muted); font-size: 0.8rem; text-align: center; }
+.panel-evttype { display: inline-block; font-size: 0.65rem; background: rgba(45,138,110,.15);
+                 color: var(--accent2); border-radius: 3px; padding: 1px 5px; margin-left: 4px; vertical-align: middle; }
+.panel-date { font-size: 0.7rem; color: var(--muted); }
+.panel-empty { padding: 20px 14px; color: var(--muted); font-size: 0.78rem; text-align: center; }
+.panel-hint { padding: 40px 20px; color: var(--muted); font-size: 0.78rem; text-align: center; line-height: 1.7; }
+
+.hidden { display: none !important; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>GedComOrt</h1>
-  <span class="vtag">v1.0.16</span>
+  <span class="vtag">v1.0.17</span>
   <span class="tagline">Geocodning av GEDCOM-platser</span>
 </header>
 
-<main>
+<!-- Drop zone — full area before file loaded -->
+<div id="drop-area">
+  <h2>Dra och släpp GEDCOM-fil här</h2>
+  <p>Filen bearbetas helt lokalt i webbläsaren — ingenting skickas till någon server</p>
+  <button class="pick-btn" id="pick-btn">Välj .ged-fil</button>
+  <input type="file" id="file-input" accept=".ged,.GED" style="display:none">
+</div>
 
-  <div id="drop-area">
-    <h2>Dra och släpp GEDCOM-fil här</h2>
-    <p>Filen bearbetas helt lokalt i webbläsaren — ingenting skickas till någon server</p>
-    <button class="pick-btn" id="pick-btn">Välj .ged-fil</button>
-    <input type="file" id="file-input" accept=".ged,.GED" style="display:none">
-  </div>
+<!-- Dashboard — 3-column grid -->
+<div id="work-area" class="hidden">
 
-  <div id="work-area" class="hidden">
+  <!-- LEFT: file info, stats, controls, progress, log -->
+  <div id="col-left">
 
     <div class="file-banner active">
-      <span class="lbl">Aktiv fil:</span>
-      <span class="val" id="fname"></span>
-      <span class="meta" id="fmeta"></span>
+      <div class="fb-row"><span class="lbl">Aktiv fil:</span><span class="val" id="fname"></span></div>
+      <div class="fb-row"><span class="meta" id="fmeta"></span></div>
     </div>
 
     <div class="file-banner">
-      <span class="lbl">Importera från Disgen ortsfil (ZIP):</span>
-      <span class="val" id="imp-fname" style="color:var(--muted);font-weight:400">ingen fil vald</span>
-      <span class="imp-result hidden" id="imp-result"></span>
+      <div class="fb-row"><span class="lbl">Disgen ortsfil (ZIP):</span><span class="val" id="imp-fname" style="color:var(--muted);font-weight:400">ingen vald</span></div>
+      <div class="fb-row"><span class="imp-result hidden" id="imp-result"></span></div>
       <button class="imp-btn" id="imp-btn">&#x1F4C2; Välj DisgenPlaces ZIP…</button>
       <input type="file" id="imp-input" accept=".zip,.ZIP" style="display:none">
     </div>
 
     <div class="info-box">
-      <b>Sökkällor &amp; strategi (v1.0.16):</b>
+      <b>Sökkällor:</b>
       <div class="src-legend">
         <span><span class="src-dot" style="background:#a78bfa"></span>Disgen ZIP (primär)</span>
         <span><span class="src-dot dot-nom"></span>Nominatim/OSM</span>
         <span><span class="src-dot dot-ph"></span>Photon/Komoot</span>
-        <span><span class="src-dot dot-approx"></span>Ungefärlig (ort/socken)</span>
+        <span><span class="src-dot dot-approx"></span>Ungefärlig</span>
       </div>
-      Importera Disgen-ortsfil (ZIP) för direktmatchning · Länskoder rensas · Gårdsnummer/kv-beteckningar rensas · Geocodning som komplement för ej matchade
     </div>
 
     <div class="stats">
       <div class="stat"><div class="n" id="s-total">—</div><div class="t">Unika platser</div></div>
-      <div class="stat"><div class="n green" id="s-has">—</div><div class="t">Exakta koordinater</div></div>
+      <div class="stat"><div class="n green" id="s-has">—</div><div class="t">Exakta</div></div>
       <div class="stat"><div class="n orange" id="s-approx">—</div><div class="t">Ungefärliga</div></div>
-      <div class="stat"><div class="n orange" id="s-miss">—</div><div class="t">Saknar koordinater</div></div>
+      <div class="stat"><div class="n orange" id="s-miss">—</div><div class="t">Saknar koord.</div></div>
       <div class="stat"><div class="n green" id="s-found">—</div><div class="t">Hittade nu</div></div>
     </div>
 
     <div class="controls">
       <button class="btn-primary" id="btn-geo">&#x1F4CD; Geocoda saknade platser</button>
       <button class="btn-secondary" id="btn-save" disabled>&#x2B07; Spara GEDCOM</button>
-      <button class="btn-secondary" id="btn-new" style="margin-left:auto">&#x21BA; Läs in ny fil</button>
+      <button class="btn-secondary" id="btn-new">&#x21BA; Läs in ny fil</button>
     </div>
 
     <div id="prog-box" class="hidden">
@@ -206,61 +256,61 @@ tbody tr.selected-row td:first-child { border-left: 3px solid var(--accent2); pa
         <div class="prog-counters">
           <span><b id="p-done">0</b>/<b id="p-tot">0</b></span>
           <span style="color:var(--accent2)"><b id="p-found">0</b> exakta</span>
-          <span style="color:var(--warn)"><b id="p-approx">0</b> ungefärliga</span>
+          <span style="color:var(--warn)"><b id="p-approx">0</b> ungefärl.</span>
           <span style="color:var(--error)"><b id="p-fail">0</b> ej hittade</span>
         </div>
       </div>
       <div class="prog-bar-wrap"><div class="prog-bar" id="p-bar"></div></div>
-      <div class="prog-bottom">
-        <span id="p-eta"></span>
-        <span id="p-elapsed"></span>
-      </div>
+      <div class="prog-bottom"><span id="p-eta"></span><span id="p-elapsed"></span></div>
     </div>
 
-    <div>
-      <div class="sec-title">PLATSER I FILEN</div>
-      <div class="search-wrap" style="margin-bottom:8px">
-        <svg class="search-icon" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
-        <input type="text" id="place-search" placeholder="Sök plats… (ord i valfri ordning, t.ex. Raus Planteringsvägen)">
-        <button class="search-clear hidden" id="search-clear" title="Rensa sökning">&times;</button>
-      </div>
-      <div class="filter-bar" style="margin-bottom:8px">
-        <span>Filtrera:</span>
-        <button class="flt active" data-filter="all">Alla</button>
-        <button class="flt" data-filter="missing">Saknar koordinater</button>
-        <button class="flt" data-filter="has">Exakta</button>
-        <button class="flt" data-filter="approx">Ungefärliga</button>
-        <button class="flt" data-filter="found">Hittade nu</button>
-        <button class="flt" data-filter="error">Ej hittade</button>
-        <span id="filter-count"></span>
-      </div>
-      <div class="content-layout">
-        <div class="tbl-wrap">
-          <table>
-            <thead><tr><th>Plats</th><th>Förek.</th><th>Status</th><th>Koordinater &amp; precision</th></tr></thead>
-            <tbody id="tbl-body"></tbody>
-          </table>
-        </div>
-        <div id="side-panel">
-          <div class="panel-header">
-            <span class="panel-title">&#x1F464; Personer &amp; händelser</span>
-            <button class="panel-close" id="panel-close">&times;</button>
-          </div>
-          <div class="panel-place" id="panel-place"></div>
-          <div class="panel-body" id="panel-body"></div>
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <div class="sec-title">LOGG</div>
-      <div id="log"></div>
-    </div>
+    <div class="sec-title" style="margin-bottom:2px">LOGG</div>
+    <div id="log"></div>
 
   </div>
-</main>
 
-<footer>GedComOrt v1.0.16 &mdash; Nominatim (OSM) + Photon (Komoot)</footer>
+  <!-- MIDDLE: search + filter + table -->
+  <div id="col-mid">
+    <div class="search-wrap">
+      <svg class="search-icon" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="place-search" placeholder="Sök plats… (ord i valfri ordning, t.ex. Raus Planteringsvägen)">
+      <button class="search-clear hidden" id="search-clear" title="Rensa">&times;</button>
+    </div>
+    <div class="filter-bar">
+      <span>Filtrera:</span>
+      <button class="flt active" data-filter="all">Alla</button>
+      <button class="flt" data-filter="missing">Saknar</button>
+      <button class="flt" data-filter="has">Exakta</button>
+      <button class="flt" data-filter="approx">Ungefärliga</button>
+      <button class="flt" data-filter="found">Hittade nu</button>
+      <button class="flt" data-filter="error">Ej hittade</button>
+      <span id="filter-count"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Plats</th><th>Förek.</th><th>Status</th><th>Koordinater &amp; precision</th></tr></thead>
+        <tbody id="tbl-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- RIGHT: person/event panel -->
+  <div id="col-right">
+    <div id="side-panel">
+      <div class="panel-header">
+        <span class="panel-title">&#x1F464; Personer &amp; händelser</span>
+        <button class="panel-close" id="panel-close">&times;</button>
+      </div>
+      <div class="panel-place" id="panel-place"></div>
+      <div class="panel-body" id="panel-body">
+        <div class="panel-hint">Klicka på en plats i listan för att se kopplade personer och händelser.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>GedComOrt v1.0.17 &mdash; Nominatim (OSM) + Photon (Komoot)</footer>
 
 <script>
 (function() {
@@ -296,7 +346,7 @@ var impBtn     = document.getElementById('imp-btn');
 var impInput   = document.getElementById('imp-input');
 var placeSearch= document.getElementById('place-search');
 var searchClear= document.getElementById('search-clear');
-var sidePanel  = document.getElementById('side-panel');
+
 var panelPlace = document.getElementById('panel-place');
 var panelBody  = document.getElementById('panel-body');
 var panelClose = document.getElementById('panel-close');
@@ -328,15 +378,13 @@ function applySearch(){
 }
 
 // ── Side panel ─────────────────────────────────────────────────────────────
-panelClose.addEventListener('click', closePanel);
-
 function closePanel(){
-  sidePanel.classList.remove('open');
+  panelBody.innerHTML='<div class="panel-hint">Klicka på en plats i listan för att se kopplade personer och händelser.</div>';
+  panelPlace.textContent='';
   Array.prototype.forEach.call(tblBody.rows, function(tr){ tr.classList.remove('selected-row'); });
 }
 
 function openPanel(placeName){
-  // Highlight selected row
   Array.prototype.forEach.call(tblBody.rows, function(tr){
     tr.classList.toggle('selected-row', tr.dataset.placeName===placeName);
   });
@@ -357,11 +405,10 @@ function openPanel(placeName){
       panelBody.appendChild(d);
     });
   }
-  sidePanel.classList.add('open');
 }
 
+panelClose.addEventListener('click', closePanel);
 // ── Build person index from GEDCOM lines ───────────────────────────────────
-// Event tag → Swedish label
 var EVT_LABELS = {
   BIRT:'Född', DEAT:'Död', BURI:'Begravd', CHR:'Döpt', CONF:'Konfirmerad',
   MARR:'Gift', DIV:'Skild', ENGA:'Förlovad', RESI:'Bosatt', EMIG:'Emigrerat',
@@ -467,9 +514,11 @@ dropArea.addEventListener('drop', function(e){
 
 btnNew.addEventListener('click', function(){
   lines=[]; fname=''; places={};
-  dropArea.classList.remove('hidden'); workArea.classList.add('hidden'); progBox.classList.add('hidden');
+  document.getElementById('drop-area').style.display='';
+  workArea.classList.add('hidden');
+  progBox.classList.add('hidden');
   tblBody.innerHTML=''; logEl.innerHTML=''; fileInput.value=''; impInput.value='';
-  document.getElementById('imp-fname').textContent='ingen fil vald';
+  document.getElementById('imp-fname').textContent='ingen vald';
   document.getElementById('imp-fname').style.color='var(--muted)';
   document.getElementById('imp-result').classList.add('hidden');
   btnSave.disabled=true; resetGeoBtn(); activeFilter='all';
@@ -483,11 +532,13 @@ function loadFile(file){
     parseGedcom();
     buildPersonIndex();
     renderTable(); updateStats(); applyFilter();
-    dropArea.classList.add('hidden'); workArea.classList.remove('hidden');
+    document.getElementById('drop-area').style.display='none';
+    workArea.classList.remove('hidden');
     document.getElementById('fname').textContent=fname;
     document.getElementById('fmeta').textContent=(fsize/1024).toFixed(1)+' KB · '+lines.length.toLocaleString('sv-SE')+' rader';
-    // Reset search and panel
-    placeSearch.value=''; searchClear.classList.add('hidden'); closePanel();
+    placeSearch.value=''; searchClear.classList.add('hidden');
+    panelBody.innerHTML='<div class="panel-hint">Klicka på en plats i listan för att se kopplade personer och händelser.</div>';
+    panelPlace.textContent='';
     addLog('Fil laddad: '+fname+' ('+lines.length.toLocaleString('sv-SE')+' rader) · '+Object.keys(personIndex).length+' platser indexerade','ok');
   });
 }
