@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GedComOrt v1.0.17</title>
+<title>GedComOrt v1.0.18</title>
 <style>
 :root {
   --bg: #1a1f2e; --surface: #232938; --surface2: #2c3347; --border: #3a4258;
@@ -192,7 +192,7 @@ tbody tr.selected-row td:first-child { border-left: 3px solid var(--accent2); pa
 
 <header>
   <h1>GedComOrt</h1>
-  <span class="vtag">v1.0.17</span>
+  <span class="vtag">v1.0.18</span>
   <span class="tagline">Geocodning av GEDCOM-platser</span>
 </header>
 
@@ -310,7 +310,7 @@ tbody tr.selected-row td:first-child { border-left: 3px solid var(--accent2); pa
 
 </div>
 
-<footer>GedComOrt v1.0.17 &mdash; Nominatim (OSM) + Photon (Komoot)</footer>
+<footer>GedComOrt v1.0.18 &mdash; Nominatim (OSM) + Photon (Komoot)</footer>
 
 <script>
 (function() {
@@ -579,12 +579,32 @@ function doImportZip(file){
       });
       if(!xmlFile){ alert('Hittade ingen XML-fil i ZIP-arkivet.'); return; }
 
-      xmlFile.async('string').then(function(xmlText){
+      // Use uint8array + TextDecoder to guarantee UTF-8 (JSZip 'string' uses Latin-1 by default,
+      // which corrupts Swedish å,ä,ö and breaks name matching)
+      xmlFile.async('uint8array').then(function(bytes){
+        var xmlText;
+        try {
+          xmlText = new TextDecoder('utf-8').decode(bytes);
+          // Strip UTF-8 BOM if present
+          if(xmlText.charCodeAt(0) === 0xFEFF) xmlText = xmlText.slice(1);
+        } catch(e) {
+          xmlText = new TextDecoder('iso-8859-1').decode(bytes);
+        }
+
         // Parse XML and build coord map: FullName → {lati, lon}
         var cm = {};
         var parser = new DOMParser();
         var doc = parser.parseFromString(xmlText, 'text/xml');
+
+        // Diagnose parse errors
+        var parseErr = doc.querySelector('parsererror');
+        if(parseErr){
+          addLog('XML-parsningsfel: '+parseErr.textContent.slice(0,80),'warn');
+        }
+
         var placesEl = doc.getElementsByTagName('Place');
+        addLog('XML inläst: '+placesEl.length+' Place-element hittade','ok');
+
         var total = 0;
         for(var i=0; i<placesEl.length; i++){
           var pl = placesEl[i];
@@ -603,13 +623,26 @@ function doImportZip(file){
           total++;
         }
 
-        // Apply to current places
+        // Show first few keys for diagnostics
+        var sampleKeys = Object.keys(cm).slice(0,3);
+        if(sampleKeys.length) addLog('Exempel: '+sampleKeys.join(' | '),'ok');
+
+        // Apply to current places — also try trimming double spaces in XML names
         var applied=0, skipped=0, notFound=0;
         Object.keys(places).forEach(function(n){
           var p=places[n];
           if(p.status==='has'){ skipped++; return; }
-          if(cm[n]){
-            p.lati=cm[n].lati; p.lon=cm[n].lon;
+          // Direct match
+          var hit = cm[n];
+          // Fallback: normalize multiple spaces to single (Disgen uses double space in some names)
+          if(!hit) hit = cm[n.replace(/  +/g,' ')];
+          // Fallback: GEDCOM name vs XML name may differ in space around comma
+          if(!hit){
+            var nNorm = n.replace(/\s*,\s*/g,', ').replace(/  +/g,' ');
+            hit = cm[nNorm];
+          }
+          if(hit){
+            p.lati=hit.lati; p.lon=hit.lon;
             p.status='found'; p.precision='imported'; p.source='disgen';
             updateRow(n); applied++;
           } else {
@@ -623,8 +656,7 @@ function doImportZip(file){
         res.textContent='→ '+applied+' importerade, '+skipped+' redan kända, '+notFound+' ej matchade';
         res.classList.remove('hidden');
         updateStats(); applyFilter();
-        addLog('Disgen ZIP: '+total+' orter i XML → '+applied+' importerade till GEDCOM','ok');
-        if(notFound > 0) addLog(notFound+' platser i GEDCOM saknar match i ZIP-filen','warn');
+        addLog('Disgen ZIP: '+total+' orter → '+applied+' importerade, '+notFound+' ej matchade','ok');
       });
     }).catch(function(err){
       alert('Fel vid läsning av ZIP: '+err.message);
